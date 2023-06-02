@@ -1,4 +1,3 @@
-
 import os
 import sys
 import json
@@ -59,12 +58,12 @@ class DataPrepare(object):
         super(DataPrepare, self).__init__()
         self.cfg = cfg
         self.out_dir = cfg.DATA_PREPARE.OUT_DIR
-        self.db_dir = self.out_dir + '/db/'
-        self.train_db_file = self.db_dir + 'seg_raw_train'
-        self.test_db_file = self.db_dir + 'seg_raw_test'
-        self.out_db_file = self.db_dir + 'seg_pre-process_database'
-        self.out_train_db_file = self.db_dir + 'seg_train_fold_1'
-        self.out_val_db_file = self.db_dir + 'seg_val_fold_1'
+        self.db_dir = os.path.join(self.out_dir, 'db')
+        self.train_db_file = os.path.join(self.db_dir, 'seg_raw_train')
+        self.test_db_file = os.path.join(self.db_dir, 'seg_raw_test')
+        self.out_db_file = os.path.join(self.db_dir, 'seg_pre-process_database')
+        self.out_train_db_file = os.path.join(self.db_dir, 'seg_train_fold_1')
+        self.out_val_db_file = os.path.join(self.db_dir, 'seg_val_fold_1')
 
         self.image_dir = cfg.DATA_PREPARE.TRAIN_IMAGE_DIR
         self.mask_dir = cfg.DATA_PREPARE.TRAIN_MASK_DIR
@@ -76,16 +75,14 @@ class DataPrepare(object):
         self.out_fine_size = cfg.DATA_PREPARE.OUT_FINE_SIZE
         self.out_fine_spacing = cfg.DATA_PREPARE.OUT_FINE_SPACING
 
-        if not os.path.exists(self.db_dir):
-            os.makedirs(self.db_dir)
+        os.makedirs(self.db_dir, exist_ok=True)
         self._create_db_file(phase='train')
         self._create_db_file(phase='test')
         self.data_info = self._read_db()
 
         # # create dir to save smooth mask
         # self.smooth_mask_save_dir = os.path.join(self.out_dir, 'smooth_mask')
-        # if not os.path.exists(self.smooth_mask_save_dir):
-        #     os.makedirs(self.smooth_mask_save_dir)
+        # os.makedirs(self.smooth_mask_save_dir, exist_ok=True)
 
         # create dir to save coarse image and mask
         if (self.out_coarse_size is not None and self.out_coarse_spacing is not None) or (
@@ -103,12 +100,10 @@ class DataPrepare(object):
                                               self.out_coarse_spacing[2])
 
         self.coarse_image_save_dir = os.path.join(self.out_dir, 'coarse_image', coarse_prefix)
-        if not os.path.exists(self.coarse_image_save_dir):
-            os.makedirs(self.coarse_image_save_dir)
+        os.makedirs(self.coarse_image_save_dir, exist_ok=True)
 
         self.coarse_mask_save_dir = os.path.join(self.out_dir, 'coarse_mask', coarse_prefix)
-        if not os.path.exists(self.coarse_mask_save_dir):
-            os.makedirs(self.coarse_mask_save_dir)
+        os.makedirs(self.coarse_mask_save_dir, exist_ok=True)
 
         # create dir to save fine image and mask
         if (self.out_fine_size is not None and self.out_fine_spacing is not None) or (
@@ -126,12 +121,10 @@ class DataPrepare(object):
                                             self.out_fine_spacing[2])
 
         self.fine_image_save_dir = os.path.join(self.out_dir, 'fine_image', fine_prefix)
-        if not os.path.exists(self.fine_image_save_dir):
-            os.makedirs(self.fine_image_save_dir)
+        os.makedirs(self.fine_image_save_dir, exist_ok=True)
 
         self.fine_mask_save_dir = os.path.join(self.out_dir, 'fine_mask', fine_prefix)
-        if not os.path.exists(self.fine_mask_save_dir):
-            os.makedirs(self.fine_mask_save_dir)
+        os.makedirs(self.fine_mask_save_dir, exist_ok=True)
 
     def process(self, data):
         series_id = data.series_id
@@ -282,7 +275,8 @@ class DataPrepare(object):
         default_train_db = self.cfg.DATA_PREPARE.DEFAULT_TRAIN_DB
         default_val_db = self.cfg.DATA_PREPARE.DEFAULT_VAL_DB
 
-        if default_train_db is not None and default_val_db is not None:
+        if default_train_db is not None and default_val_db is not None and os.path.exists(
+                default_train_db) and os.path.exists(default_val_db):
             env = lmdb.open(default_train_db, map_size=int(1e9))
             txn = env.begin()
             series_ids_train = []
@@ -308,7 +302,7 @@ class DataPrepare(object):
                 series_ids.append(key)
 
             series_ids_train, series_ids_val = train_test_split(series_ids, test_size=self.cfg.DATA_PREPARE.VAL_RATIO,
-                                                                random_state=0)
+                                                                random_state=42, shuffle=True)
 
         print('Num of train series is: %d, num of val series is: %d.' % (len(series_ids_train), len(series_ids_val)))
 
@@ -404,7 +398,7 @@ def generate_heatmap(npy_mask, candidates_num, sigma=5, stride=4, is_single_chan
     for i in range(channel):
         centroid = extract_candidate_centroid(npy_mask[i].copy(), 100, candidates_num[i])
         if len(centroid) != candidates_num[i]:
-            centroid.extend([[0, 0, 0] for _ in range(candidates_num[i]-len(centroid))])
+            centroid.extend([[0, 0, 0] for _ in range(candidates_num[i] - len(centroid))])
         candidates_centroid.append(centroid)
 
     num_joints = len(candidates_centroid)

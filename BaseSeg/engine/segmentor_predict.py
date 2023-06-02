@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -29,8 +28,7 @@ class SegmentationInfer(object):
         # step 1 >>> init params
         self.cfg = cfg
         self.save_dir = self.cfg.TESTING.SAVER_DIR
-        if not os.path.exists(self.save_dir):
-            os.makedirs(self.save_dir)
+        os.makedirs(self.save_dir, exist_ok=True)
 
         # step 2 >>> init model
         self.coarse_model = get_coarse_model(cfg, 'test')
@@ -46,8 +44,7 @@ class SegmentationInfer(object):
 
         # step 3 >>> init log
         self.log_dir = './output/logs_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        os.makedirs(self.log_dir, exist_ok=True)
         self.logger = get_logger(self.log_dir)
         self.logger.info('\n------------ {} options -------------'.format('test'))
         self.logger.info('%s' % str(self.cfg))
@@ -122,7 +119,7 @@ class SegmentationInfer(object):
             raw_spacing = data_dict['raw_spacing']
             image_direction = data_dict['direction']
             coarse_image = data_dict['coarse_input_image']
-            coarse_zoom_factor = data_dict['coarse_zoom_factor']
+            coarse_zoom_factor = data_dict['coarse_zoom_factor']  # source/target
 
             # ----------------------------------------------------------------------------------------------------------
             # segmentation in coarse resolution.
@@ -144,7 +141,7 @@ class SegmentationInfer(object):
 
             # keep kth largest connected region.
             if self.cfg.TESTING.IS_POST_PROCESS:
-                coarse_spacing = [raw_spacing[i]*coarse_zoom_factor[i] for i in range(3)]
+                coarse_spacing = [raw_spacing[i] * coarse_zoom_factor[i] for i in range(3)]
                 area_least = 1000 / coarse_spacing[0] / coarse_spacing[1] / coarse_spacing[2]
                 out_coarse_mask = extract_topk_largest_candidates(pred_coarse_mask,
                                                                   self.cfg.DATA_LOADER.LABEL_NUM, area_least)
@@ -152,7 +149,7 @@ class SegmentationInfer(object):
                 coarse_image_shape = pred_coarse_mask.shape
                 out_coarse_mask = np.zeros(coarse_image_shape[1:])
                 for i in range(coarse_image_shape[0]):
-                    out_coarse_mask[pred_coarse_mask[i] != 0] = i+1
+                    out_coarse_mask[pred_coarse_mask[i] != 0] = i + 1
 
             # crop image based coarse segmentation mask.
             coarse_bbox = extract_bbox(out_coarse_mask)
@@ -209,7 +206,7 @@ class SegmentationInfer(object):
         torch.cuda.synchronize()
         t_end = time.time()
         average_time_usage = (t_end - t_start) * 1.0 / len(test_dataloader)
-        time_score = (100-average_time_usage) * 1.0 / 100
+        time_score = (100 - average_time_usage) * 1.0 / 100
         self.logger.info("Average time usage: {} s".format(average_time_usage))
         self.logger.info("Normalized time coefficient: {}".format(time_score))
 
@@ -229,7 +226,7 @@ class SegmentationInfer(object):
 
         num_class = len(self.cfg.DATA_LOADER.LABEL_INDEX)
         if self.cfg.TESTING.IS_POST_PROCESS:
-            fine_spacing = [raw_spacing[i]*fine_zoom_factor[i] for i in range(3)]
+            fine_spacing = [raw_spacing[i] * fine_zoom_factor[i] for i in range(3)]
             area_least = 2000 / fine_spacing[0] / fine_spacing[1] / fine_spacing[2]
             predict = extract_topk_largest_candidates(predict, self.cfg.DATA_LOADER.LABEL_NUM, area_least)
         else:
@@ -240,8 +237,8 @@ class SegmentationInfer(object):
 
         out_mask = np.zeros(raw_image_shape, np.uint8)
         out_mask[crop_fine_bbox[0]:crop_fine_bbox[1],
-                 crop_fine_bbox[2]:crop_fine_bbox[3],
-                 crop_fine_bbox[4]:crop_fine_bbox[5]] = predict
+        crop_fine_bbox[2]:crop_fine_bbox[3],
+        crop_fine_bbox[4]:crop_fine_bbox[5]] = predict
 
         if self.cfg.TESTING.IS_SAVE_MASK:
             mask_path = os.path.join(self.save_dir, series_id + ".nii.gz")

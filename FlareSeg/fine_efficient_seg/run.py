@@ -16,13 +16,14 @@ warnings.filterwarnings('ignore')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
-
+from Common.utils import setup_seed
 from BaseSeg.config.config import get_cfg_defaults
 from Common.gpu_utils import set_gpu, run_multiprocessing
 from BaseSeg.engine.segmentor_multiprocess import SegmentationMultiProcess
 
 
 if __name__ == '__main__':
+    setup_seed(42)
     parser = argparse.ArgumentParser(description='full functional execute script of fine flare seg module.')
     parser.add_argument('-c', '--config', type=str, default='./config.yaml',
                         help='config file path')
@@ -51,9 +52,9 @@ if __name__ == '__main__':
         cfg.TRAINING.IS_DISTRIBUTED_TRAIN = False
 
     if cfg.ENVIRONMENT.DATA_BASE_DIR is not None:
-        cfg.DATA_LOADER.TRAIN_DB_FILE = cfg.ENVIRONMENT.DATA_BASE_DIR + cfg.DATA_LOADER.TRAIN_DB_FILE
-        cfg.DATA_LOADER.VAL_DB_FILE = cfg.ENVIRONMENT.DATA_BASE_DIR + cfg.DATA_LOADER.VAL_DB_FILE
-        cfg.DATA_LOADER.TEST_DB_FILE = cfg.ENVIRONMENT.DATA_BASE_DIR + cfg.DATA_LOADER.TEST_DB_FILE
+        cfg.DATA_LOADER.TRAIN_DB_FILE = os.path.join(cfg.ENVIRONMENT.DATA_BASE_DIR, cfg.DATA_LOADER.TRAIN_DB_FILE)
+        cfg.DATA_LOADER.VAL_DB_FILE = os.path.join(cfg.ENVIRONMENT.DATA_BASE_DIR, cfg.DATA_LOADER.VAL_DB_FILE)
+        cfg.DATA_LOADER.TEST_DB_FILE = os.path.join(cfg.ENVIRONMENT.DATA_BASE_DIR, cfg.DATA_LOADER.TEST_DB_FILE)
 
     train_db_path = cfg.DATA_LOADER.TRAIN_DB_FILE
     val_db_path = cfg.DATA_LOADER.VAL_DB_FILE

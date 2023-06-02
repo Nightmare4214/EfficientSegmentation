@@ -86,8 +86,8 @@ def load_json(json_file):
 def save_json(json_file, dict_data):
     # 将字典保存在filename文件中，并保存在directory文件夹中
     directory = os.path.dirname(json_file)  # 有可能直接给文件名，没有文件夹
-    if (directory != '') and (not os.path.exists(directory)):
-        os.makedirs(directory)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
     f = open(json_file, 'wt')
     json.dump(dict_data, f, cls=MyEncoder, sort_keys=True, indent=4)
     f.close()

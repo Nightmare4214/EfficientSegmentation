@@ -1,6 +1,6 @@
 ENVIRONMENT:
-  NUM_GPU: 8
-  DATA_BASE_DIR: 'FlareSeg/dataset/'
+  NUM_GPU: 1
+  DATA_BASE_DIR: '/mnt/data/datasets/FLARE_2022_Playground_Fully_Supervised/FullySupervised'
 
 DATA_LOADER:
   TRAIN_VAL_FOLD: 1
@@ -55,6 +55,6 @@ TRAINING:
     TOTAL_EPOCHS: 200
   SAVER:
     SAVER_DIR: './output/'
-  IS_DISTRIBUTED_TRAIN: True
+  IS_DISTRIBUTED_TRAIN: False
   IS_APEX_TRAIN: True
   LOSS: 'dice'

@@ -47,7 +47,7 @@ class PredictDataset(Dataset):
 
     def __getitem__(self, idx):
         file_name = self.data_filenames[idx]
-        image_path = self.image_dir + file_name
+        image_path = os.path.join(self.image_dir, file_name)
         series_id = file_name.split('_0000.nii.gz')[0]
 
         image_dict = load_ct_info(image_path)

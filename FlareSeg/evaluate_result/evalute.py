@@ -52,8 +52,7 @@ if __name__ == '__main__':
     gt_mask_dir = '/fileser/zhangfan/DataSet/flare_val_mask/flare_labeled_masks/'
     predict_mask_dir = '/fileser/zhangfan/efficientSegmentation/outputs/'
     out_ind_csv_dir = './output/'
-    if not os.path.exists(out_ind_csv_dir):
-        os.makedirs(out_ind_csv_dir)
+    os.makedirs(out_ind_csv_dir, exist_ok=True)
     out_ind_csv_path = out_ind_csv_dir + 'ind_seg_result.csv'
 
     ind_content = ['series_uid', 'z_spacing']

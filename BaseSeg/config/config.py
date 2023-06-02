@@ -10,8 +10,8 @@ _C = CN()
 # -----------------------------------------------------------------------------
 _C.ENVIRONMENT = CN()
 _C.ENVIRONMENT.CUDA = True
-_C.ENVIRONMENT.SEED = 1
-_C.ENVIRONMENT.NUM_GPU = 4
+_C.ENVIRONMENT.SEED = 42
+_C.ENVIRONMENT.NUM_GPU = 1
 _C.ENVIRONMENT.RANK = '0'
 _C.ENVIRONMENT.MONITOR_TIME_INTERVAL = 0.1
 _C.ENVIRONMENT.DATA_BASE_DIR = None

@@ -4,9 +4,9 @@
 segmentation of flare in coarse resolution.
 """
 
+import argparse
 import os
 import sys
-import argparse
 import warnings
 
 import torch
@@ -15,13 +15,14 @@ warnings.filterwarnings('ignore')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
-
+from Common.utils import setup_seed
 from Common.gpu_utils import set_gpu
 from BaseSeg.config.config import get_cfg_defaults
 from BaseSeg.engine.segmentor import BaseSegmentation3D
 
 
 if __name__ == '__main__':
+    setup_seed(42)
     parser = argparse.ArgumentParser(description='full functional execute script of coarse flare seg module.')
     group = parser.add_mutually_exclusive_group()
     parser.add_argument('-c', '--config', type=str, default='./config.yaml', help='config file path')
@@ -50,8 +51,8 @@ if __name__ == '__main__':
         cfg.TRAINING.IS_DISTRIBUTED_TRAIN = False
 
     if cfg.ENVIRONMENT.DATA_BASE_DIR is not None:
-        cfg.DATA_LOADER.TRAIN_DB_FILE = cfg.ENVIRONMENT.DATA_BASE_DIR + cfg.DATA_LOADER.TRAIN_DB_FILE
-        cfg.DATA_LOADER.VAL_DB_FILE = cfg.ENVIRONMENT.DATA_BASE_DIR + cfg.DATA_LOADER.VAL_DB_FILE
+        cfg.DATA_LOADER.TRAIN_DB_FILE = os.path.join(cfg.ENVIRONMENT.DATA_BASE_DIR, cfg.DATA_LOADER.TRAIN_DB_FILE)
+        cfg.DATA_LOADER.VAL_DB_FILE = os.path.join(cfg.ENVIRONMENT.DATA_BASE_DIR, cfg.DATA_LOADER.VAL_DB_FILE)
 
     cfg.freeze()
 

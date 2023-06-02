@@ -12,10 +12,12 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.distributed as dist
 import torch.backends.cudnn as cudnn
-from tensorboardX import SummaryWriter
+from torch.cuda.amp import GradScaler, autocast
+from torch.nn.parallel import DistributedDataParallel
+from torch.utils.tensorboard import SummaryWriter
 
-from apex import amp
-from apex.parallel import DistributedDataParallel
+# from apex import amp
+# from apex.parallel import DistributedDataParallel
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -149,10 +151,10 @@ class BaseSegmentation3D(object):
 
         # init optimizer
         self.optimizer = self._init_optimizer() if self.phase == 'train' else None
-
+        self.scaler = GradScaler()
         # set apex training
-        if self.is_apex_train:
-            self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level='O1')
+        # if self.is_apex_train:
+        #     self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level='O1')
 
         # load model weight
         self._load_weights()
@@ -166,8 +168,7 @@ class BaseSegmentation3D(object):
         # step 3 >>> init logger
         self.log_dir = os.path.join(self.train_save_dir, 'logs') if phase == 'train' else \
             os.path.join(self.test_save_dir, 'logs')
-        if self.is_print_out and not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        os.makedirs(self.log_dir, exist_ok=True)
 
         if self.is_print_out:
             self.logger = get_logger(self.log_dir)
@@ -228,8 +229,7 @@ class BaseSegmentation3D(object):
     def _save_weights(self, epoch, net_state_dict, optimizer_state_dict):
         if self.is_print_out:
             model_dir = os.path.join(self.train_save_dir, 'models')
-            if not os.path.exists(model_dir):
-                os.makedirs(model_dir)
+            os.makedirs(model_dir, exist_ok=True)
             self.best_model_weight_path = os.path.join(model_dir, 'best_model.pt')
 
             torch.save({
@@ -395,25 +395,43 @@ class BaseSegmentation3D(object):
                 images, masks = images.cuda(), masks.cuda()
 
             self.optimizer.zero_grad()
-            if self.cfg.FINE_MODEL.DEEP_SUPERVISION:
-                output_seg_list = self.model(images)
-                seg_loss = 0
-                loss_func = SegLoss(loss_func=self.cfg.TRAINING.LOSS, activation=self.cfg.TRAINING.ACTIVATION)
-                for seg in output_seg_list:
-                    seg_loss += loss_func(seg, masks, is_average=True)
-                seg_loss /= len(output_seg_list)
-                output_seg = output_seg_list[0]
+            if self.is_apex_train:
+                with autocast():
+                    if self.cfg.FINE_MODEL.DEEP_SUPERVISION:
+                        output_seg_list = self.model(images)
+                        seg_loss = 0
+                        loss_func = SegLoss(loss_func=self.cfg.TRAINING.LOSS, activation=self.cfg.TRAINING.ACTIVATION)
+                        for seg in output_seg_list:
+                            seg_loss += loss_func(seg, masks, is_average=True)
+                        seg_loss /= len(output_seg_list)
+                        output_seg = output_seg_list[0]
+                    else:
+                        output_seg = self.model(images)
+                        loss_func = SegLoss(loss_func=self.cfg.TRAINING.LOSS, activation=self.cfg.TRAINING.ACTIVATION)
+                        seg_loss = loss_func(output_seg, masks, is_average=True)
             else:
-                output_seg = self.model(images)
-                loss_func = SegLoss(loss_func=self.cfg.TRAINING.LOSS, activation=self.cfg.TRAINING.ACTIVATION)
-                seg_loss = loss_func(output_seg, masks, is_average=True)
+                if self.cfg.FINE_MODEL.DEEP_SUPERVISION:
+                    output_seg_list = self.model(images)
+                    seg_loss = 0
+                    loss_func = SegLoss(loss_func=self.cfg.TRAINING.LOSS, activation=self.cfg.TRAINING.ACTIVATION)
+                    for seg in output_seg_list:
+                        seg_loss += loss_func(seg, masks, is_average=True)
+                    seg_loss /= len(output_seg_list)
+                    output_seg = output_seg_list[0]
+                else:
+                    output_seg = self.model(images)
+                    loss_func = SegLoss(loss_func=self.cfg.TRAINING.LOSS, activation=self.cfg.TRAINING.ACTIVATION)
+                    seg_loss = loss_func(output_seg, masks, is_average=True)
 
             if self.is_apex_train:
-                with amp.scale_loss(seg_loss, self.optimizer) as scaled_loss:
-                    scaled_loss.backward()
+                self.scaler.scale(seg_loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                # with amp.scale_loss(seg_loss, self.optimizer) as scaled_loss:
+                #     scaled_loss.backward()
             else:
                 seg_loss.backward()
-            self.optimizer.step()
+                self.optimizer.step()
 
             dice_metric_func = DiceMetric()
             dice_output = dice_metric_func(output_seg, masks, activation=self.cfg.TRAINING.ACTIVATION,
@@ -553,12 +571,9 @@ class BaseSegmentation3D(object):
         out_coarse_image_dir = os.path.join(self.test_save_dir, 'coarse_image')
         out_coarse_mask_dir = os.path.join(self.test_save_dir, 'coarse_mask')
         out_fine_mask_dir = os.path.join(self.test_save_dir, 'fine_mask')
-        if not os.path.exists(out_coarse_image_dir):
-            os.makedirs(out_coarse_image_dir)
-        if not os.path.exists(out_coarse_mask_dir):
-            os.makedirs(out_coarse_mask_dir)
-        if not os.path.exists(out_fine_mask_dir):
-            os.makedirs(out_fine_mask_dir)
+        os.makedirs(out_coarse_image_dir, exist_ok=True)
+        os.makedirs(out_coarse_mask_dir, exist_ok=True)
+        os.makedirs(out_fine_mask_dir, exist_ok=True)
 
         out_ind_csv_path = os.path.join(self.test_save_dir, 'ind_seg_result.csv')
         ind_content = ['series_uid', 'z_spacing']

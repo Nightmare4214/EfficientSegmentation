@@ -1,13 +1,13 @@
 ENVIRONMENT:
-  DATA_BASE_DIR: 'FlareSeg/dataset/'
+  DATA_BASE_DIR: '/mnt/data/datasets/FLARE_2022_Playground_Fully_Supervised/FullySupervised'
 
 DATA_PREPARE:
   TRAIN_SERIES_IDS_TXT: 'file_list/train_series_uids.txt'
-  TEST_SERIES_IDS_TXT: 'file_list/val_series_uids.txt'
+  TEST_SERIES_IDS_TXT: 'file_list/test_series_uids.txt'
   BAD_CASE_SERIES_IDS_TXT: None
-  TRAIN_IMAGE_DIR: 'train_images'
-  TRAIN_MASK_DIR: 'train_mask'
-  TEST_IMAGE_DIR: 'val_images'
+  TRAIN_IMAGE_DIR: 'Subtask1/TrainImage'
+  TRAIN_MASK_DIR: 'Subtask1/TrainMask'
+  TEST_IMAGE_DIR: 'TestImage'
   TEST_MASK_DIR: None
   DEFAULT_TRAIN_DB: 'db/seg_train_database'
   DEFAULT_VAL_DB: 'db/seg_val_database'

@@ -1,6 +1,6 @@
 ENVIRONMENT:
-  NUM_GPU: 4
-  DATA_BASE_DIR: 'FlareSeg/dataset/'
+  NUM_GPU: 1
+  DATA_BASE_DIR: '/mnt/data/datasets/FLARE_2022_Playground_Fully_Supervised/FullySupervised'
   IS_SMOKE_TEST: False
 
 DATA_LOADER:
@@ -19,7 +19,7 @@ DATA_LOADER:
   WINDOW_LEVEL: [-325, 325]
   EXTEND_SIZE: 20
   NUM_WORKER: 7
-  BATCH_SIZE: 5
+  BATCH_SIZE: 2
   FIVE_FOLD_LIST: [1]
 
 DATA_AUGMENT:
@@ -54,7 +54,7 @@ FINE_MODEL:
   META_ARCHITECTURE: 'EfficientSegNet'
   AUXILIARY_TASK: False
   AUXILIARY_CLASS: 1
-  INPUT_SIZE: [192, 192, 192]
+  INPUT_SIZE: [170, 170, 170]
   NUM_CLASSES: 4
   NUM_BLOCKS: [2, 2, 2, 2, 2]
   DECODER_NUM_BLOCK: 1
@@ -75,13 +75,13 @@ TRAINING:
     TOTAL_EPOCHS: 200
   SAVER:
     SAVER_DIR: './output/train'
-  IS_DISTRIBUTED_TRAIN: True
+  IS_DISTRIBUTED_TRAIN: False
   IS_APEX_TRAIN: True
   LOSS: 'dice'
   METRIC: 'dice'
 
 TESTING:
-  COARSE_MODEL_WEIGHT_DIR: '../model_weights/base_coarse_model/best_model.pt'
+  COARSE_MODEL_WEIGHT_DIR: '/mnt/data/PycharmProject/EfficientSegmentation/FlareSeg/coarse_base_seg/output/experiment_UNet_ResFourLayerConvBlock_ResTwoLayerConvBlock_None_fold-1_coarse_size-160_channel-8_depth-4_loss-dice_metric-dice_time-2023-05-30_16-21-56/models/best_model.pt'
   FINE_MODEL_WEIGHT_DIR: None
   NUM_WORKER: 3
   BATCH_SIZE: 1
